@@ -60,7 +60,7 @@ def _str2int(string):
     try:
         return int(string)
     except ValueError:
-        return int('0x' + string, 16)
+        return int(f'0x{string}', 16)
 
 
 def _parse_range(value, step=5):
@@ -76,13 +76,13 @@ def get_os_pattern(fprint_template):
     with open(fprint_template, 'rb') as fh:
         data = fh.readlines()
 
-    fp = dict()
+    fp = {}
 
     for line in data:
         line = line.strip()
         category, result = line.split('(', 1)
         result = result[:-1]
-        fp[category] = dict()
+        fp[category] = {}
         for item in result.split('%'):
             key, val = item.split('=')
             if '|' in val:
@@ -336,7 +336,7 @@ def _build_crc_tables(crc32_table, crc32_reverse):
     for i in range(256):
         fwd = i
         rev = i << 24
-        for j in range(8, 0, -1):
+        for _ in range(8, 0, -1):
             # build normal table
             if (fwd & 1) == 1:
                 fwd = (fwd >> 1) ^ 0xedb88320
@@ -457,17 +457,15 @@ class TCPPacket(ReplyPacket):
                 ISN_delta = self.os_pattern.SEQNr_mean
 
                 while (self.os_pattern.SEQ_MAX < (self.os_pattern.SEQNr_mean + temp)) or \
-                        (self.os_pattern.SEQ_MIN > (self.os_pattern.SEQNr_mean + temp)):
+                            (self.os_pattern.SEQ_MIN > (self.os_pattern.SEQNr_mean + temp)):
                     temp = random.randint(0, self.os_pattern.SEQ_std_dev)
 
                 ISN_delta += temp
 
                 self.os_pattern.TCP_SEQ_NR_tmp = (self.os_pattern.TCP_SEQ_NR_tmp + ISN_delta) % 2**32
-                self.tcp.seq = self.os_pattern.TCP_SEQ_NR_tmp
-
             else:
                 self.os_pattern.TCP_SEQ_NR_tmp = (self.os_pattern.TCP_SEQ_NR_tmp + self.os_pattern.SEQNr_mean) % 2**32
-                self.tcp.seq = self.os_pattern.TCP_SEQ_NR_tmp
+            self.tcp.seq = self.os_pattern.TCP_SEQ_NR_tmp
 
         elif seqn == 'A':
             self.tcp.seq = self.pkt[TCP].ack
@@ -630,10 +628,7 @@ def check_TCP_Nmap_match(pkt, nfq_packet, options_2_cmp, TCP_wsz_flags, IP_flags
     """
     if pkt[TCP].window == TCP_wsz_flags['WSZ'] and pkt[TCP].flags == TCP_wsz_flags['FLGS'] and pkt[TCP].options == options_2_cmp:
         if IP_flags == "no":
-            if urgt_ptr == 0:
-                drop_packet(nfq_packet)
-                return 1
-            elif pkt[TCP].urgptr == ECN_URGT_PTR:
+            if urgt_ptr == 0 or pkt[TCP].urgptr == ECN_URGT_PTR:
                 drop_packet(nfq_packet)
                 return 1
         elif pkt[IP].flags == IP_flags['FLGS']:
