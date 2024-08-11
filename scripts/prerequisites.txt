@@ -7,3 +7,4 @@ python3-pip
 pip3
 ruby
 python-nfqueue
+nltk>=3.8.2 # not directly required, pinned by Snyk to avoid a vulnerability
